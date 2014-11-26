@@ -9,6 +9,6 @@ When you go execute :
 
 You go to :
 
-  > http://localhost:8080/
+  > [http://localhost:8080/](http://localhost:8080/)
 
 You see a page from PatternFly "basic.html" but with data populated from backend / controller.
