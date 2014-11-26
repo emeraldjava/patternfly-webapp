@@ -1,0 +1,9 @@
+<config>
+	<context-values>
+		<resource path="src/main/resources/templates/index.ftl">
+			<value key="dataTable" object-class="fr.pgervaise.patternfly.datatable.core.DataTable"/>
+		</resource>
+	</context-values>
+	<macro-library>
+	</macro-library>
+</config>

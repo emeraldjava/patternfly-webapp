@@ -1,8 +1,19 @@
 package fr.pgervaise.patternfly.webapp.controller;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
+
+import fr.pgervaise.patternfly.datatable.core.DataTable;
+import fr.pgervaise.patternfly.datatable.core.DataTableColumn;
+import fr.pgervaise.patternfly.datatable.datasource.DataTableDataSource;
+import fr.pgervaise.patternfly.domain.Navigator;
+import fr.pgervaise.patternfly.webapp.view.NavigatorView;
 
 /**
  * 
@@ -13,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class IndexController {
 
     @RequestMapping({"/", "/index"})
-    public String viewHome(Model model) {
+    public String viewHome(HttpServletRequest request, Model model) {
         
         String dataArray[][] = new String[][] {
             { "Trident", "Internet Explorer 4.0", "Win 95+", "4", "X" }, 
@@ -74,8 +85,45 @@ public class IndexController {
             { "Misc", "PSP browser", "PSP", "-", "C" }, 
             { "Other browsers", "All others", "-", "-", "U" }
         };
+        
+        // TODO: Use Java 8 !
+        List<Navigator> navigatorList = new ArrayList<Navigator>();
 
-        model.addAttribute("dataArray", dataArray);
+        for (String data[] : dataArray)
+            navigatorList.add(new Navigator(data));
+
+        DataTable<NavigatorView> navigatorDataTable = new DataTable<NavigatorView>(NavigatorView.class, "static");
+
+        navigatorDataTable.addColumn(new DataTableColumn("renderingEngine", "Rendering Engine"));
+        navigatorDataTable.addColumn(new DataTableColumn("browser", "Browser"));
+        navigatorDataTable.addColumn(new DataTableColumn("platform", "Platform(s)"));
+        navigatorDataTable.addColumn(new DataTableColumn("engineVersion", "Engine version"));
+        navigatorDataTable.addColumn(new DataTableColumn("cssGrade", "CSS grade"));
+
+        navigatorDataTable.setDataSource(new DataTableDataSource<NavigatorView>() {
+            @Override
+            public List<? extends Object> getResults(DataTable<NavigatorView> dataTable) {
+                // No dynamic filter
+                return navigatorList;
+            }
+        });
+
+        // Launch the "query"
+        navigatorDataTable.setDoQueryOnFirstView(true);
+        navigatorDataTable.init(request);
+
+        model.addAttribute("navigatorDataTable", navigatorDataTable);
+        
+        // All data
+        DataTable<NavigatorView> navigatorDataTableAll = new DataTable<NavigatorView>(NavigatorView.class, "all");
+        for (DataTableColumn column : navigatorDataTable.getColumns())
+            navigatorDataTableAll.addColumn(column);
+        navigatorDataTableAll.setDataSource(navigatorDataTable.getDataSource());
+        navigatorDataTableAll.setDoQueryOnFirstView(true);
+        navigatorDataTableAll.setResultsPerPage(1000); // max 1000 results
+        navigatorDataTableAll.init(request);
+        
+        model.addAttribute("navigatorDataTableAll", navigatorDataTableAll);
 
         return "index";
     }

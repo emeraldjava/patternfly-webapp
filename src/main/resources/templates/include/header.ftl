@@ -1,3 +1,5 @@
+<#import "/spring.ftl" as spring/>
+
 <!DOCTYPE html>
 <!--[if IE 8]><html class="ie8"><![endif]-->
 <!--[if IE 9]><html class="ie9"><![endif]-->
@@ -13,23 +15,6 @@
     <link rel="apple-touch-icon-precomposed" sizes="72x72" href="resources/images/apple-touch-icon-72-precomposed.png">
     <link rel="apple-touch-icon-precomposed" href="resources/images/apple-touch-icon-57-precomposed.png">
     <link href="resources/css/patternfly.css" rel="stylesheet" media="screen, print">
-    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-    <!--[if lt IE 9]>
-    <script src="resources/js/html5shiv.min.js"></script>
-    <script src="resources/js/respond.min.js"></script>
-    <![endif]-->
-    <!-- IE8 requires jQuery and Bootstrap JS to load in head to prevent rendering bugs -->
-    <!-- IE8 requires jQuery v1.x -->
-    <script src="//code.jquery.com/jquery-1.10.2.min.js"></script>
-    <script src="resources/js/bootstrap.min.js"></script>
-    <script src="resources/js/jquery.dataTables.js"></script>
-    <script src="resources/js/patternfly.min.js"></script>
-    <script>
-      // Initialize Datatables
-      $(document).ready( function() {
-        $('.datatable').dataTable();
-      });
-    </script>
   </head>
   <body>
     <nav class="navbar navbar-default navbar-pf" role="navigation">
@@ -97,22 +82,22 @@
         </ul>
         <ul class="nav navbar-nav navbar-primary">
           <li>
-            <a href="dashboard.html">Dashboard</a>
+            <a href=""><@spring.message "menu.home" /></a>
           </li>
           <li>
-            <a href="form.html">Form</a>
+            <a href="">Form</a>
           </li>
           <li>
-            <a href="bootstrap-treeview-2.html">Tree View</a>
+            <a href="">Tree View</a>
           </li>
           <li>
-            <a href="tab.html">Tab</a>
+            <a href="">Tab</a>
           </li>
           <li class="active">
-            <a href="basic.html">Basic</a>
+            <a href="">Basic</a>
           </li>
           <li>
-            <a href="typography-2.html">Typography</a>
+            <a href="">Typography</a>
           </li>
           <li>
         </ul>
@@ -123,6 +108,6 @@
         <div class="col-md-12">
 
           <ol class="breadcrumb">
-            <li><a href="#">Home</a></li>
+            <li><a href="#"><@spring.message "menu.home" /></a></li>
             <li>Basic</li>
           </ol>

@@ -1,25 +1,29 @@
-<#include "includes/header.ftl" />
-  <h1>Basic</h1>
+<#import "/layout/layouts.ftl" as layout>
+
+<@layout.main>
+  <h1>Static rendering</h1>
+
+  <@layout.showDataTable navigatorDataTable />
+
+  <h1>Dynamic rendering</h1>
+  
   <table class="datatable table table-striped table-bordered">
     <thead>
       <tr>
-        <th>Rendering engine</th>
-        <th>Browser</th>
-        <th>Platform(s)</th>
-        <th>Engine version</th>
-        <th>CSS grade</th>
+        <#list navigatorDataTableAll.columns as column>
+            <th>${column.label}</th>
+        </#list>
       </tr>
     </thead>
     <tbody>
-        <#list dataArray as datas>
+        <#list navigatorDataTableAll.results as result>
             <tr>
-            <#list datas as data>
-                <td>${data}</td>
-            </#list>
+                <#list navigatorDataTableAll.columns as column>
+                    <td>${layout.getResultValueByColumn(result, column)}</td>
+                </#list>
             </tr>
-        </#list>      
+        </#list>
     </tbody>
   </table>
-  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum eget eros tincidunt, semper ante nec, dapibus ante.</p>
 
-<#include "includes/footer.ftl" />
+</@layout.main>
