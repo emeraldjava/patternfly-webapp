@@ -13,16 +13,32 @@ public class DataTableFilter {
 		STRING,
 		NUMBER
 	};
-	
+
 	public enum Operator {
-		IS, // =
-		GREATER,
-		GREATER_OR_EQUAL,
-		LOWER,
-		LOWER_OR_EQUAL,
-		CONTAINS, // like %X%
-		BEGIN_WITH, // like x%
-		END_WITH // like %x
+		IS(1, "="), // =
+		GREATER(2, ">"),
+		GREATER_OR_EQUAL(3, ">="),
+		LOWER(4, "<"),
+		LOWER_OR_EQUAL(5, "<="),
+		CONTAINS(6, "${contains}"), // like %X%
+		BEGIN_WITH(7, "${startWith}"), // like x%
+		END_WITH(8, "${endWith}"); // like %x
+
+		private Integer id;
+		private String text;
+
+		Operator(Integer id, String text) {
+			this.id = id;
+			this.text = text;
+		}
+
+		public Integer getId() {
+			return id;
+		}
+
+		public String getText() {
+			return text;
+		}
 	}
 
 	protected String label = "FILTER_LABEL";
@@ -50,7 +66,12 @@ public class DataTableFilter {
 	private boolean skipOnFilter;
 
 	protected List<DataTableFilterValue> acceptedValues = null;
+	protected List<DataTableFilterOperator> acceptedOperators = null;
 
+	/**
+	 * 
+	 * @param label
+	 */
 	public DataTableFilter(String label) {
 		setLabel(label);
 		setId(label);
@@ -215,6 +236,25 @@ public class DataTableFilter {
 	 */
 	public DataTableFilter setAcceptedValues(List<DataTableFilterValue> acceptedValues) {
 		this.acceptedValues = acceptedValues;
+		
+		return this;
+	}
+
+	/**
+	 * Retourne la liste des opérateurs acceptés
+	 * @return
+	 */
+	public List<DataTableFilterOperator> getAcceptedOperators() {
+		return acceptedOperators;
+	}
+
+	/**
+	 * Positionne la liste des opérateurs acceptés
+	 * @param acceptedOperators
+	 * @return
+	 */
+	public DataTableFilter setAcceptedOperators(List<DataTableFilterOperator> acceptedOperators) {
+		this.acceptedOperators = acceptedOperators;
 		
 		return this;
 	}

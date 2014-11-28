@@ -21,6 +21,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import fr.pgervaise.patternfly.datatable.core.DataTableFilter.Operator;
 import fr.pgervaise.patternfly.datatable.datasource.DataTableDataSource;
 
 /**
@@ -301,12 +302,17 @@ public class DataTable<VIEW> {
 				continue ;
 			if (filter.isValueSet())
 				continue ;
-			String filterValue = getFilterValue(request, filter.getId());
+			String filterValue = getFilterValue(request, filter);
 			if (filterValue == null || filterValue.trim().equals(""))
 				continue ;
 			filter.setValue(filterValue);
 			filtered = true;
-			
+
+			// Check if Operator set
+			Operator operator = getFilterOperator(request, filter);
+			if (operator != null)
+				filter.setOperator(operator);
+
 			if (showFilters == null)
 				showFilters = true;
 		}
@@ -348,8 +354,15 @@ public class DataTable<VIEW> {
 		}
 	}
 
-	public String getFilterValue(HttpServletRequest request, String id) {
-		
+	/**
+	 * 
+	 * @param request
+	 * @param dataTableFilter
+	 * @return
+	 */
+	public String getFilterValue(HttpServletRequest request, DataTableFilter dataTableFilter) {
+		String id = dataTableFilter.getId();
+
 		for (int i = 0; i < filters.size(); i++) {
 			if (id.equals(filters.get(i).getId())) {
 				String value = getParameter(request, "filter_" + (i + 1));
@@ -358,6 +371,38 @@ public class DataTable<VIEW> {
 					value = null;
 
 				return value;
+			}
+		}
+
+		return null;
+	}
+	
+	/**
+	 * 
+	 * @param request
+	 * @param dataTableFilter
+	 * @return
+	 */
+	public Operator getFilterOperator(HttpServletRequest request, DataTableFilter dataTableFilter) {
+		String id = dataTableFilter.getId();
+
+		for (int i = 0; i < filters.size(); i++) {
+			if (id.equals(filters.get(i).getId())) {
+				String operatorValue = getParameter(request, "filter_" + (i + 1) + "_op");
+
+				if (operatorValue != null && operatorValue.trim().equals(""))
+					operatorValue = null;
+				
+				if (operatorValue != null) {
+					// convert to an operator
+					for (DataTableFilterOperator dataTableFilterOperator : dataTableFilter.getAcceptedOperators()) {
+						if (dataTableFilterOperator.getOperator() != null)
+							if (operatorValue.equals(dataTableFilterOperator.getOperator().getId().toString()))
+								return dataTableFilterOperator.getOperator();
+					}
+				}
+
+				return null;
 			}
 		}
 
@@ -703,10 +748,10 @@ public class DataTable<VIEW> {
 							case BEGIN_WITH : if (!viewValue.startsWith(filterValue)) filterOk = false; break;
 							case END_WITH : if (!viewValue.endsWith(filterValue)) filterOk = false; break;
 							case CONTAINS : if (!viewValue.contains(filterValue)) filterOk = false; break;
-							case GREATER : if (viewValue.compareTo(filterValue) > 0) filterOk = false; break;
-							case GREATER_OR_EQUAL : if (viewValue.compareTo(filterValue) >= 0) filterOk = false; break;
-							case LOWER : if (viewValue.compareTo(filterValue) < 0) filterOk = false; break;
-							case LOWER_OR_EQUAL : if (viewValue.compareTo(filterValue) <= 0) filterOk = false; break;
+							case GREATER : if (viewValue.compareTo(filterValue) < 0) filterOk = false; break;
+							case GREATER_OR_EQUAL : if (viewValue.compareTo(filterValue) <= 0) filterOk = false; break;
+							case LOWER : if (viewValue.compareTo(filterValue) >= 0) filterOk = false; break;
+							case LOWER_OR_EQUAL : if (viewValue.compareTo(filterValue) > 0) filterOk = false; break;
 							default :
 								logger.warn("Erreur dans le filtrage virtuel ('" + filter.label + "'), opérateur non supporté => " + filter.getOperator());
 								viewResults.clear();

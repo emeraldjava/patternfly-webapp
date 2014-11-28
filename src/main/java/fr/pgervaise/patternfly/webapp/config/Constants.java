@@ -1,4 +1,4 @@
-package fr.pgervaise.patternfly.config;
+package fr.pgervaise.patternfly.webapp.config;
 
 /**
  * 

@@ -1,7 +1,9 @@
 package fr.pgervaise.patternfly.webapp.controller;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -11,6 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import fr.pgervaise.patternfly.datatable.core.DataTable;
 import fr.pgervaise.patternfly.datatable.core.DataTableColumn;
+import fr.pgervaise.patternfly.datatable.core.DataTableFilter;
+import fr.pgervaise.patternfly.datatable.core.DataTableFilter.Operator;
+import fr.pgervaise.patternfly.datatable.core.DataTableFilterOperator;
+import fr.pgervaise.patternfly.datatable.core.DataTableFilterValue;
 import fr.pgervaise.patternfly.datatable.datasource.DataTableDataSource;
 import fr.pgervaise.patternfly.domain.Navigator;
 import fr.pgervaise.patternfly.webapp.view.NavigatorView;
@@ -100,6 +106,19 @@ public class IndexController {
         navigatorDataTable.addColumn(new DataTableColumn("engineVersion", "Engine version"));
         navigatorDataTable.addColumn(new DataTableColumn("cssGrade", "CSS grade"));
 
+        navigatorDataTable.addFilter(new DataTableFilter("Rendering Engine").setId("renderingEngine").setOperator(Operator.CONTAINS));
+        navigatorDataTable.addFilter(new DataTableFilter("Browser").setId("browser").setOperator(Operator.CONTAINS));
+        navigatorDataTable.addFilter(new DataTableFilter("Platform(s)").setId("platform").setOperator(Operator.CONTAINS));
+
+        navigatorDataTable.addFilter(new DataTableFilter("Engine version").setId("engineVersion").setNewLine().setAcceptedOperators(
+        	Arrays.asList(Operator.LOWER, Operator.LOWER_OR_EQUAL, Operator.GREATER, Operator.GREATER_OR_EQUAL)
+        		.stream().map(DataTableFilterOperator::new).collect(Collectors.toList())
+        ));
+
+        navigatorDataTable.addFilter(new DataTableFilter("CSS Grade").setId("cssGrade").setAcceptedValues(
+                Arrays.asList("A", "C", "X").stream().map(DataTableFilterValue::new).collect(Collectors.toList())
+        ));
+
         navigatorDataTable.setDataSource(new DataTableDataSource<NavigatorView>() {
             @Override
             public List<? extends Object> getResults(DataTable<NavigatorView> dataTable) {
@@ -118,6 +137,7 @@ public class IndexController {
         DataTable<NavigatorView> navigatorDataTableAll = new DataTable<NavigatorView>(NavigatorView.class, "all");
         for (DataTableColumn column : navigatorDataTable.getColumns())
             navigatorDataTableAll.addColumn(column);
+
         navigatorDataTableAll.setDataSource(navigatorDataTable.getDataSource());
         navigatorDataTableAll.setDoQueryOnFirstView(true);
         navigatorDataTableAll.setResultsPerPage(1000); // max 1000 results

@@ -6,11 +6,11 @@ import java.util.Date;
 
 import org.springframework.ui.Model;
 
-import fr.pgervaise.patternfly.config.Constants;
 import fr.pgervaise.patternfly.datatable.core.DataTableResultMapper;
 import fr.pgervaise.patternfly.datatable.domain.IIdentifiable;
 import fr.pgervaise.patternfly.datatable.domain.IStatuable;
 import fr.pgervaise.patternfly.datatable.service.ValeurReferenceService;
+import fr.pgervaise.patternfly.webapp.config.Constants;
 
 /**
  * 

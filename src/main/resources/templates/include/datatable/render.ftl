@@ -1,4 +1,6 @@
-<#macro showDataTable dataTable id="_def">
+<#macro showDataTable dataTable>
+
+<#local id=dataTable.id />
 
 <#local resultsPerPage=dataTable.resultsPerPage!10 />
 <#local showFilters = "" />
@@ -31,7 +33,7 @@
     }
 
     function doReset${id}() {
-        $(':input','#formRecherche${id}')
+        $(document).ready(':input','#formRecherche${id}')
             .not(':button, :submit, :reset, :hidden')
             .val('')
             .attr('value', '')
@@ -73,7 +75,7 @@
     </#if>
     
     <script language="javascript">
-        $(function() {
+        $(document).ready(function() {
             $('#btnReset${id}').click(function () {
                 doReset${id}();
             });
@@ -85,12 +87,12 @@
 
         function switchFiltrage${id}() {
             if ($('#dataTableSearchBarExtended${id}').is(":visible")) {
-                $('#dataTableSearchBarTitleIcon${id}').removeClass('glyphicon-chevron-up').addClass('glyphicon-chevron-down');
+                $('#dataTableSearchBarTitleIcon${id}').removeClass('fa-angle-up').addClass('fa-angle-down');
                 $('#dataTableSearchBarExtended${id}').slideUp("fast");
                 $('#dataTableSearchBarSearchButton${id}').fadeIn("fast");
                 $('#showFilters${id}').val("0");
             } else {
-                $('#dataTableSearchBarTitleIcon${id}').removeClass('glyphicon-chevron-down').addClass('glyphicon-chevron-up');
+                $('#dataTableSearchBarTitleIcon${id}').removeClass('fa-angle-down').addClass('fa-angle-up');
                 $('#dataTableSearchBarExtended${id}').slideDown("fast");
                 $('#dataTableSearchBarSearchButton${id}').fadeOut("fast");
                 $('#showFilters${id}').val("1");
@@ -110,7 +112,7 @@
 
         <div class="col-md-6">
             <#if hasFilter>
-                <span style="font-weight: bold"><a href="javascript: switchFiltrage${id}()">Filtrage <span id="dataTableSearchBarTitleIcon${id}" class="glyphicon glyphicon-chevron-<#if filterVisible>up<#else>down</#if>"></span></a></span>
+                <span style="font-weight: bold"><a href="javascript: switchFiltrage${id}()"><@spring.message "datatable.filter.block" /> <span id="dataTableSearchBarTitleIcon${id}" class="fa fa-angle-<#if filterVisible>up<#else>down</#if>"></span></a></span>
             </#if>
         </div>
         <div class="col-md-6" style="min-height: 27px">
@@ -122,7 +124,7 @@
                 </#if>
             </#if>
             <div id="dataTableSearchBarSearchButton" style="display: <#if filterVisible>none<#else>visible</#if>">
-                <a href="javascript:doSubmit${id}()" class="btn btn-default btn-xs pull-right" style="margin-top: 0px; margin-bottom: 5px; margin-right: 5px">Rechercher</a>
+                <a href="javascript:doSubmit${id}()" class="btn btn-default btn-xs pull-right" style="margin-top: 0px; margin-bottom: 5px; margin-right: 5px"><@spring.message "datatable.filter.button" /></a>
             </div>
         </div>
     </div>
@@ -149,8 +151,11 @@
             <#assign filterColumnCount = dataTable.filters?size>
         </#if>
 
+        <div class="dataTables_header">
+
         <div id="dataTableSearchBarExtended${id}" style="display: <#if filterVisible>visible<#else>none</#if>">
-        <table cellspacing="0" cellpadding="0" border="0" class="well table-condensed dataTableSearch" style="width: 100%; margin: 0; margin-bottom: 5px">
+
+        <table cellspacing="0" cellpadding="0" border="0" style="width: 100%; margin: 0; margin-bottom: 0px">
             <tbody>
                 <tr>
                     <#local filterSubmitWritten = false>
@@ -164,9 +169,16 @@
                             <td <#if filter.width??>style="width:${filter.width}px"</#if>>
                                 ${filter.label}&nbsp;:
                             </td>
-                            <td colspan="${1 + 2 * (filter.colSpan - 1)}">
+                            <td colspan="${1 + 2 * (filter.colSpan - 1)}" style="text-align: left">
+                            	<#if filter.acceptedOperators??>
+                           			<select id="filter_${filter_index + 1}_op${id}" name="filter_${filter_index + 1}_op${id}">
+                            		<#list filter.acceptedOperators as filterAcceptedOperator>
+                            			<option value="${(filterAcceptedOperator.operator.id)!0}" <#if filter.operator.id == (filterAcceptedOperator.operator.id)!0>selected="selected"</#if>>${filterAcceptedOperator.label!}</option>
+                            		</#list>
+                           			</select>
+                            	</#if>
                                 <#if !filter.acceptedValues??>
-                                    <input type="text" id="filter_${filter_index + 1}${id}" name="filter_${filter_index + 1}${id}" value="${filter.value!?html}" <#if filter.size??>size="${filter.size}"</#if> class="InputQuantitePres">
+                                    <label><input type="text" id="filter_${filter_index + 1}${id}" name="filter_${filter_index + 1}${id}" value="${filter.value!?html}" <#if filter.size??>size="${filter.size}"</#if> class="form-control"></label>
                                 <#else>
                                     <select id="filter_${filter_index + 1}${id}" name="filter_${filter_index + 1}${id}" style="font-size: 11px; <#if filter.size??>width: ${filter.size}px</#if>" class="form-control">
                                         <option value=""></option>
@@ -185,20 +197,7 @@
                                 <#if ((filterTmpColumnCount = filterColumnCount && filterTmpRowCount = 0) || filter_index = 0) && !btnSearchWritten>
                                     <#local btnSearchWritten = true>
                                     <td style="vertical-align: middle; text-align: center" colspan="2" rowspan="${filterRowCount}">
-                                        <#--
-                                        <div class="btn-group" style="font-size: 11px">
-                                          <button id="btnSearch${id}" type="button" style="font-size: 11px" class="btn btn-default btn-sm">Rechercher</button>
-                                          <button type="button" style="font-size: 11px; padding-left: 2px; padding-right: 2px;" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
-                                            <span class="caret"></span>
-                                            <span class="sr-only">Toggle Dropdown</span>
-                                          </button>
-                                          <ul class="dropdown-menu" role="menu" style="font-size: 11px">
-                                            <li><a id="btnReset${id}" href="#">Effacer</a></li>
-                                          </ul>
-                                        </div>
-
-                                        -->
-                                        <input id="btnSearch" type="submit" onClick="doSubmit${id}()" value="Rechercher" class="btn btn-default btn-sm" style="width: 80px">
+                                        <input id="btnSearch" type="submit" onClick="doSubmit${id}()" value="<@spring.message "datatable.filter.button" />" class="btn btn-default btn-sm" style="width: 80px">
                                     </td>
                                 </#if>
                                 </tr>
@@ -210,21 +209,18 @@
                             </#if>
                         </#if>
                     </#list>
-                <#--
-                <tr>
-                    <td colspan="${(filterColumnCount + 1) * 2}" style="background-color: #7F7F7F; color: white; font-weight: bold; border-top: 1px solid #DDDDDD ">Résultats</td>
-                </tr>
-                -->
             </tbody>
         </table>
+        </div>
+
         </div>
     </#if>
 
     <#assign resultColCount=0 />
 
-    <table cellpadding="0" cellspacing="0" border="0" class="dataTable_result table table-condensed table-striped table-bordered" id="dataTableResult${id}">
+    <table cellpadding="0" cellspacing="0" border="0" class="datatable datable-manual dataTable_result table table-condensed table-striped table-bordered" id="dataTableResult${id}">
         <thead>
-            <tr>
+            <tr role="row">
                 <#if dataTable.viewLink??>
                     <#assign resultColCount = resultColCount + 1 />
                     <th style="width:20px">&nbsp;</th>
@@ -321,35 +317,67 @@
                             </#if>
                         </td>
                     </#if>
-                    <#--
-                    <td>
-                        <img src="../rsrc-bo/images/edit2.png">
-                        <img src="../rsrc-bo/images/trash.gif">
-                    </td>
-                    -->
                 </tr>
             </#list>
         </tbody>
     </table>
+<div class="dataTables_footer" style="margin-top: -20px">
+	<#assign viewCount1 = 1 + (dataTable.pageIndex -1) * resultsPerPage />
+
+    <#if (dataTable.pageIndex * resultsPerPage > dataTable.resultCount)>
+        <#assign viewCount2 = dataTable.resultCount />
+    <#else>
+        <#assign viewCount2 = (dataTable.pageIndex) * resultsPerPage />
+    </#if>
+
+    <#assign viewCount3 = dataTable.resultCount!0 />
+
+	&nbsp; <@message "datatable.results.view.label" viewCount1 viewCount2 viewCount3 />
+
+    <#if dataTable.resultRealCount ?? && (dataTable.resultRealCount > dataTable.resultCount)><img
+        src="../rsrc-bo/images/error2.png" style="margin-top: -4px" data-placement="right" data-toggle="tooltip"
+        title="Trop de résultats (${dataTable.resultRealCount}). Veuillez affiner le filtrage."
+        id="img-too-many-results-${dataTable.id}">
+        <script language="javascript"> $(document).ready(function() { $("#img-too-many-results-${dataTable.id}").tooltip(); }); </script></#if>
+
+    <div class="dataTables_paginate paging_bootstrap_input" id="DataTables_Table_0_paginate">
+        <ul class="pagination">
+            <#if (dataTable.pageIndex == 1)>
+                <li class="first disabled">
+                    <span class="i fa fa-angle-double-left"></span>
+                </li>
+                <li class="prev disabled">
+                    <span class="i fa fa-angle-left"></span>
+                </li>
+            <#else>
+                <#assign pagLink = pageLink(dataTable) />
+                <li class="first disabled">
+                    <span class="i fa fa-angle-double-left"></span>
+                </li>
+                <li class="prev">
+                    <span class="i fa fa-angle-left"></span>
+                </li>
+            </#if>
+        </ul>
+
+        <div class="pagination-input">
+        	<#-- 
+            <input type="text" class="paginate_input"><span class="paginate_of_no_js"><@spring.message "of" /> <b>${dataTable.pageCount}</b></span>
+            -->
+            <input type="text" class="paginate_input"><span class="paginate_of_no_js"><@spring.message "of" /> <b>${dataTable.pageCount}</b></span>
+        </div>
+        
+        <ul class="pagination">
+            <li class="next <#if (dataTable.pageIndex >= dataTable.pageCount)>disabled</#if>"><span class="i fa fa-angle-right"></span></li>
+            <li class="last <#if (dataTable.pageIndex >= dataTable.pageCount)>disabled</#if>"><span class="i fa fa-angle-double-right"></span></li>
+        </ul>
+    </div>
+</div>
 
     <#if (dataTable.results?size > 0)>
     <div id="dataTablePager${id}" class="row" style="height: 50px">
         <div class="col-md-6">
-            <#if (dataTable.results?size > 0)>
-                <div class="dataTables_info">
-                    Affichage de ${1 + (dataTable.pageIndex -1) * resultsPerPage} à
-                    <#if (dataTable.pageIndex * resultsPerPage > dataTable.resultCount)>
-                        ${dataTable.resultCount}
-                    <#else>
-                        ${(dataTable.pageIndex) * resultsPerPage}
-                    </#if>
-                    sur ${dataTable.resultCount!0} résultats <#if dataTable.resultRealCount ?? && (dataTable.resultRealCount > dataTable.resultCount)><img
-                        src="../rsrc-bo/images/error2.png" style="margin-top: -4px" data-placement="right" data-toggle="tooltip"
-                        title="Trop de résultats (${dataTable.resultRealCount}). Veuillez affiner le filtrage."
-                        id="img-too-many-results-${dataTable.id}">
-                        <script language="javascript"> $(function() { $("#img-too-many-results-${dataTable.id}").tooltip(); }); </script></#if>
-                </div>
-            </#if>
+            
         </div>
         <div class="col-md-6">
             <div class="dataTables_paginate pull-right" style="margin: 0px">
@@ -357,13 +385,13 @@
                     <#assign pagLink = pageLink(dataTable) />
                     <#assign pagCount = 5 />
                     <ul class="pagination pagination-sm" style="margin: 0">
-                        <#-- Bouton "Précédent"
+                        <#-- Bouton "Précédent" -->
                         <#if (dataTable.pageIndex == 1)>
                             <li class="prev disabled"><a href="#">&laquo;</a></li>
                         <#else>
                             <li class="prev"><a href="${pagLink}${(dataTable.pageIndex - 1)?c}">&laquo;</a></li>
                         </#if>
-                        -->
+                        
 
                         <#-- Bouton "Premier" -->
                         <#if (dataTable.pageIndex == 1)>
@@ -392,7 +420,7 @@
                             </#list>
                         </#if>
                         
-                        <#-- Bouton "Suivant"
+                        <#-- Bouton "Suivant" -->
                         <#if (dataTable.pageIndex >= dataTable.pageCount)>
                             <li class="next disabled">
                                 <a href="#">&raquo;</a>
@@ -402,7 +430,7 @@
                                 <a href="${pagLink}${(dataTable.pageIndex + 1)?c}">&raquo;</a>
                             </li>
                         </#if>
-                        -->
+                        
 
                         <#-- Bouton "Dernier" -->
                         <#if (dataTable.pageIndex >= dataTable.pageCount)>

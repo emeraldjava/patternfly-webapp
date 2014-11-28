@@ -146,6 +146,7 @@
     <script language="javascript">
         $(document).ready(function() {
             $('#${dataTableResultId} tr').click(function(event) {
+            	console.log($(event.target));
                 var target = $(event.target);
                 if (target.get(0).tagName != "TH")
                     target = target.parentsUntil("th");

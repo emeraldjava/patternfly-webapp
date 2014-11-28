@@ -69,4 +69,8 @@ public class Navigator {
     public void setCssGrade(String cssGrade) {
         this.cssGrade = cssGrade;
     }
+    
+    public static void main(String[] args) {
+		System.out.println("4".compareTo("5") < 0);
+	}
 }
