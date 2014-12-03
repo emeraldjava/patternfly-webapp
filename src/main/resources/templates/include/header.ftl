@@ -15,6 +15,8 @@
     <link rel="apple-touch-icon-precomposed" sizes="72x72" href="resources/images/apple-touch-icon-72-precomposed.png">
     <link rel="apple-touch-icon-precomposed" href="resources/images/apple-touch-icon-57-precomposed.png">
     <link href="resources/css/patternfly.css" rel="stylesheet" media="screen, print">
+    <link href="resources/css/pgervaise.css" rel="stylesheet" media="screen, print">
+    <link href="resources/css/bootstrap-select.min.css" rel="stylesheet" media="screen, print"> 
 
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -32,6 +34,7 @@
       // Initialize Datatables
       $(document).ready( function() {
         $('.datatable').not('.datable-manual').dataTable();
+        $('.selectpicker').selectpicker();
       });
     </script>
 

@@ -3,7 +3,7 @@ function fctWaiting(show) {
 		// Pour IE8
 		if ($('#waiting-inner-ie8').length > 0) {
 			$('#waiting').css("background", "background-color: #ffffff");
-			$('#waiting-inner-ie8').html('<img src="../rsrc-bo/images/waiting.gif"/>');
+			$('#waiting-inner-ie8').html('<img src="../images/spinner.gif"/>');
 		} else {
 			// $('#waiting').css("background", "rgb(255, 255, 255) url('../images/waiting.gif') 50% 50% no-repeat");
 		}

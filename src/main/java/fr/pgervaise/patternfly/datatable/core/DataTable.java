@@ -6,8 +6,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -65,9 +63,6 @@ public class DataTable<VIEW> {
 
 	private Integer resultsPerPage = 10;
 
-	private String queryCountTemplate = null;
-	private String queryTemplate = null;
-
 	private List<VIEW> results = new ArrayList<VIEW>();
 	
 	private DataTableResultMapper<VIEW> resultMapper;
@@ -97,21 +92,11 @@ public class DataTable<VIEW> {
 	private Integer maxResults = 1000;
 
 	private Map<String, DataTableParameterModifier> dataTableParameterModifierMap = new HashMap<String, DataTableParameterModifier>();
-	
-	/**
-	 * 
-	 * @param viewClass
-	 */
-	public DataTable(Class<VIEW> viewClass) {
-		this.viewClass = viewClass;
-		// this.id = new UUIDGenerator().generateUUID();
-		this.id = "_def";
-	}
 
 	/**
 	 * 
 	 * @param viewClass
-	 * @param id
+	 * @param id Short ID of Datatable (ex: "def") for using several datatables in one HTML view
 	 */
 	public DataTable(Class<VIEW> viewClass, String id) {
 		this.viewClass = viewClass;
@@ -148,10 +133,6 @@ public class DataTable<VIEW> {
 		this.dataSource = dataSource;
 	}
 
-	public void init(HttpServletRequest request) {
-		init(request, null);
-	}
-
 	public String getTitle() {
 		return title;
 	}
@@ -182,30 +163,11 @@ public class DataTable<VIEW> {
 	}
 
 	/**
-	 * Initialisation SANS requête en BDD
+	 * Initialisation
 	 * @param request
 	 */
-	public void initWithoutQuery(HttpServletRequest request) {
-		init(request, null, false);
-	}
-
-	/**
-	 * Initialisation avec requête en BDD
-	 * @param request
-	 * @param entityManager
-	 */
-	public void init(HttpServletRequest request, EntityManager entityManager) {
-		boolean doQuery = true;
-
-		String tempModeExport = getModeExport(request);
-
-		if (tempModeExport == null)
-			tempModeExport = modeExport;
-
-		if (tempModeExport == null)
-			doQuery = false;
-		
-		init(request, entityManager, doQuery);
+	public void init(HttpServletRequest request) {
+		init(request, true);
 	}
 
 	/**
@@ -234,14 +196,13 @@ public class DataTable<VIEW> {
 	}
 
 	/**
-	 * 
+	 * Get a parameter for THIS datatable (i.e. against internal ID)
 	 * @param request
 	 * @param name
 	 * @return
 	 */
 	public String getRequestParam(HttpServletRequest request, String name) {
-		name = name + (id == null ? "" : id);
-		return request.getParameter(name);
+		return request.getParameter(name + "_" + id);
 	}
 
 	/**
@@ -249,7 +210,7 @@ public class DataTable<VIEW> {
 	 * @param request
 	 * @param entityManager
 	 */
-	public void init(HttpServletRequest request, EntityManager entityManager, boolean doQuery) {
+	public void init(HttpServletRequest request, boolean doQuery) {
 		String tempModeExport = getModeExport(request);
 
 		if (tempModeExport != null)
@@ -328,9 +289,9 @@ public class DataTable<VIEW> {
 
 		if (doQuery && canDoQuery) {
 			if (dataSource != null) {
-				doQuery(dataSource);
-			} else if (entityManager != null) {
-				doQuery(entityManager);
+				dataSource.doQuery();
+			} else {
+				logger.warn("No datasource !");
 			}
 		}
 
@@ -469,6 +430,27 @@ public class DataTable<VIEW> {
 		return filters;
 	}
 
+	/**
+	 * Determine if this datatable got a visible filter (not hidden)
+	 * @return
+	 */
+	public Boolean hasVisibleFilter() {
+		for (DataTableFilter dataTableFilter : filters) {
+			if (!dataTableFilter.isHidden())
+				return true;
+		}
+
+		return false;
+	}
+	
+	/**
+	 * Determine if filter bar is visible
+	 * @return
+	 */
+	public boolean isFilterBarVisible() {
+		return false;
+	}
+	
 	public DataTable<VIEW> addFilter(DataTableFilter filter) {
 		filters.add(filter);
 
@@ -571,8 +553,8 @@ public class DataTable<VIEW> {
 			sortLink.append("&");
 
 			try {
-				sortLink.append("filter_" + filterIndex);
-				sortLink.append(id == null ? "" : id);
+				sortLink.append("filter_" + filterIndex + "_");
+				sortLink.append(id);
 				sortLink.append("=");
 				sortLink.append(filterLoop.getValue() == null ? "" : URLEncoder.encode(filterLoop.getValue().toString(), "UTF-8"));
 			} catch (UnsupportedEncodingException e) { throw new RuntimeException(e); }
@@ -580,15 +562,15 @@ public class DataTable<VIEW> {
 		}
 
 		// Prend la page en cours
-		sortLink.append("&pageIndex");
-		sortLink.append(id == null ? "" : id);
+		sortLink.append("&pageIndex_");
+		sortLink.append(id);
 		sortLink.append("=");
 		sortLink.append(pageIndex == null ? "" : pageIndex.toString());
 
 		// Ajoute le mode d'export
 		try {
-			sortLink.append("&modeExport");
-			sortLink.append(id == null ? "" : id);
+			sortLink.append("&modeExport_");
+			sortLink.append(id);
 			sortLink.append("=");
 			sortLink.append(modeExport == null ? "" : URLEncoder.encode(modeExport, "UTF-8"));
 		} catch (UnsupportedEncodingException e) { throw new RuntimeException(e); }
@@ -619,419 +601,6 @@ public class DataTable<VIEW> {
 	    Type type = getClass().getGenericSuperclass();
 	    ParameterizedType paramType = (ParameterizedType) type;
 	    return (Class<VIEW>) paramType.getActualTypeArguments()[0];
-	}
-
-	private void sortViewResults(List<? extends Object> viewResult, DataTableColumn orderByColumn) {
-		String orderById = orderByColumn.getId();
-		
-		if (orderById != null) {
-			int pointIndex = orderById.indexOf('.');
-			
-			if (pointIndex >= 0)
-				orderById = orderById.substring(pointIndex + 1);
-
-			final String finalOrderById = orderById;
-
-			Collections.sort(viewResult, new Comparator<Object>() {
-				public int compare(Object o1, Object o2) {
-
-					if (sensTri == 2) {
-						Object o3 = o1;
-						o1 = o2;
-						o2 = o3;
-					}
-
-					if (o1 == o2)
-						return 0;
-
-					if (o1 == null)
-						return -1;
-
-					if (o2 == null)
-						return 1;
-
-					if (o1 != null && o2 != null && o1.getClass() == o2.getClass()) {
-						String methodName = "get" +
-							Character.toUpperCase(finalOrderById.charAt(0)) +
-							finalOrderById.substring(1);
-
-						try {
-							Method m = o1.getClass().getMethod(methodName);
-
-							o1 = m.invoke(o1);
-							o2 = m.invoke(o2);
-
-							if (o1 == o2)
-								return 0;
-
-							if (o1 == null)
-								return -1;
-
-							if (o1 != null)
-								return ((Comparable<Object>) o1).compareTo(o2);
-
-						} catch (Exception e) {
-							return 0;
-						}
-					}
-
-					return 0;
-				};
-			});
-		}
-	}
-
-	/**
-	 * Filtrage (sur place) d'une liste de résultats d'une vue
-	 * @param viewResults
-	 */
-	private void filterViewResults(List<VIEW> viewResults, List<DataTableFilter> filters) {
-		if (viewResults.size() == 0)
-			return ;
-
-		Class<?> viewClass = viewResults.get(0).getClass();
-
-		// Association, pour chaque filtre, du getter de la vue
-		Map<DataTableFilter, Method> filterMethodMapping = new HashMap<DataTableFilter, Method>();
-
-		for (DataTableFilter filter : filters) {
-			if (filter.isSkipOnFilter())
-				continue ;
-			String id = filter.getId();
-			String getterName = "get" + Character.toUpperCase(id.charAt(0)) + (id.length() > 1 ? id.substring(1) : "");
-			Method viewMethod = null;
-			try { 
-				viewMethod = viewClass.getMethod(getterName, null);
-			} catch (NoSuchMethodException e) {
-				logger.warn("Méthode non trouvée : " + getterName + "() dans la classe " + viewClass);
-				
-				viewResults.clear();
-				return ;
-			}
-
-			filterMethodMapping.put(filter, viewMethod);
-		}
-
-		Iterator<VIEW> viewIterator = viewResults.iterator();
-
-		while (viewIterator.hasNext()) {
-			// On récupère la valeur de la vue
-			VIEW view = viewIterator.next();
-
-			boolean filterOk = true;
-
-			for (DataTableFilter filter : filters) {
-				Method viewMethod = filterMethodMapping.get(filter);
-				
-				if (viewMethod == null)
-					continue ;
-				
-				Object viewValueObject = null;
-				try {
-					viewValueObject = viewMethod.invoke(view, null);
-				} catch (Exception e) {
-					logger.warn("Erreur dans l'appel de la méthode " + viewMethod.getName() + "() dans un objet de classe " + viewClass, e);
-					viewResults.clear();
-
-					return ;
-				}
-
-				if (filter.getValue() != null) {
-					if (viewValueObject == null)
-						filterOk = false;
-					else {
-						String viewValue = viewValueObject.toString();
-						String filterValue = filter.getValue().toString();
-	
-						switch (filter.getOperator()) {
-							case IS : if (!viewValue.equals(filterValue)) filterOk = false; break;
-							case BEGIN_WITH : if (!viewValue.startsWith(filterValue)) filterOk = false; break;
-							case END_WITH : if (!viewValue.endsWith(filterValue)) filterOk = false; break;
-							case CONTAINS : if (!viewValue.contains(filterValue)) filterOk = false; break;
-							case GREATER : if (viewValue.compareTo(filterValue) < 0) filterOk = false; break;
-							case GREATER_OR_EQUAL : if (viewValue.compareTo(filterValue) <= 0) filterOk = false; break;
-							case LOWER : if (viewValue.compareTo(filterValue) >= 0) filterOk = false; break;
-							case LOWER_OR_EQUAL : if (viewValue.compareTo(filterValue) > 0) filterOk = false; break;
-							default :
-								logger.warn("Erreur dans le filtrage virtuel ('" + filter.label + "'), opérateur non supporté => " + filter.getOperator());
-								viewResults.clear();
-								return ;
-						}
-					}
-
-					if (!filterOk) {
-						// Le filtre n'est pas satisfait on arrête
-						break;
-					}
-				}
-			}
-			
-			if (!filterOk)
-				viewIterator.remove();
-				
-		}
-		
-	}
-
-	/**
-	 * 
-	 * @param dataSource
-	 */
-	private void doQuery(DataTableDataSource<VIEW> dataSource) {
-		List<? extends Object> results = dataSource.getResults(this);
-
-		boolean mapped = false;
-
-		DataTableColumn orderByColumn = null;
-
-		// Ordonnancement de la vue
-		if (modeTri != null && modeTri > 0) {
-
-			if (resultMapper != null) {
-				mapped = true;
-				results = resultMapper.map(this, results);
-			}
-
-			orderByColumn = columns.get(modeTri - 1);
-
-			if (!orderByColumn.isVirtualSort())
-				sortViewResults(results, orderByColumn);
-		}
-
-		List<VIEW> mappedResults = resultMapper != null && !mapped ? resultMapper.map(this, results) : (List<VIEW>) results;
-
-		if (filters.size() > 0)
-			filterViewResults(mappedResults, filters);
-
-		if (orderByColumn != null && orderByColumn.isVirtualSort())
-			sortViewResults(results, orderByColumn);
-
-		resultCount = mappedResults.size();
-
-		List<VIEW> resultsView = new ArrayList<VIEW>();
-
-		if (results != null) {
-			if (resultsPerPage == null)
-				resultsView.addAll(mappedResults);
-			else {
-				for (int i = 0; i < resultsPerPage; i++) {
-					int index = resultsPerPage * (pageIndex - 1) + i;
-					
-					if (index >= mappedResults.size())
-						break;
-	
-					resultsView.add(mappedResults.get(resultsPerPage * (pageIndex - 1) + i));
-				}
-			}
-		}
-
-		setResults(resultsView);
-	}
-
-	/**
-	 * 
-	 * @param entityManager
-	 */
-	private void doQuery(EntityManager entityManager) {
-		StringBuilder queryString = new StringBuilder();
-
-		int filterIndex = 0;
-
-		Map<String, Object> parameters = new HashMap<String, Object>();
-
-		List<DataTableFilter> virtualFilters = new ArrayList<DataTableFilter>();
-
-		for (DataTableFilter filter : filters) {
-			filterIndex++;
-			StringBuilder filterName = new StringBuilder(filter.getId() == null ? "FILTER_ID" : filter.getId());
-
-			// Suppression de tout caractère non autorisé
-			for (int i = 0; i < filterName.length(); i++) {
-				char c = filterName.charAt(i);
-				if (Character.isLetterOrDigit(c) || c == '.')
-					continue ;
-				filterName = filterName.deleteCharAt(i);
-			}
-
-			Object filterValue = null;
-			
-			try {
-				filterValue = filter.getTypedValue();
-			} catch (Exception e) {
-				return ;
-			}
-
-			if (filterValue == null || filterValue.toString().trim().length() == 0)
-				continue ;
-
-			if (filter.isVirtual()) {
-				// Un filtre virtuel n'est pas exploité dans la requête
-				virtualFilters.add(filter);
-				continue ;
-			}
-			
-			if (filter.isSkipOnFilter()) {
-				// Le filtre est indiqué comme à laisser de coté
-				continue ;
-			}
-
-			String filterParamName = "filterValue" + filterIndex;
-
-			queryString.append(" AND ");
-			queryString.append(filterName.toString());
-
-			switch (filter.getOperator()) {
-				case IS : queryString.append(" = "); break;
-				case GREATER : queryString.append(" > "); break;
-				case GREATER_OR_EQUAL : queryString.append(" >= "); break;
-				case LOWER : queryString.append(" < "); break;
-				case LOWER_OR_EQUAL : queryString.append(" <= "); break;
-				case CONTAINS : queryString.append(" like "); filterValue = "%" + filterValue + "%"; break;
-				case BEGIN_WITH : queryString.append(" like "); filterValue = filterValue + "%"; break;
-				case END_WITH : queryString.append(" like "); filterValue = "%" + filterValue; break;
-				default : queryString.append(" = ");
-			}
-
-			queryString.append(":");
-			queryString.append(filterParamName);
-
-			parameters.put(filterParamName, filterValue);
-		}
-
-		StringBuilder orderBy = new StringBuilder();
-
-		if (queryTemplate != null
-			&& queryTemplate.toLowerCase().indexOf(" order by ") > 0) {
-			// Le template possède déjà un order by
-			// Extraction de ce dernier avec intégration dans le "order by"
-			int orderByIndex = queryTemplate.toLowerCase().indexOf(" order by ");
-			orderBy.append(queryTemplate.substring(orderByIndex));
-			queryTemplate = queryTemplate.substring(0, orderByIndex);
-		}
-
-		DataTableColumn orderByColumn = null;
-
-		if (modeTri != null && modeTri > 0) {
-			orderByColumn = columns.get(modeTri - 1);
-
-			if (!orderByColumn.isVirtualSort()) {
-				String orderById = orderByColumn.getId();
-
-				if (orderById != null) {
-					orderBy.append(orderBy.length() == 0 ? " ORDER BY " : ", ");
-					orderBy.append(orderById);
-	
-					if (sensTri != null)
-						orderBy.append(" ").append(sensTri == 1 ? "ASC" : "DESC");
-				}
-			}
-		}
-
-		// Supprime le premier " AND" si PAS de where
-		if (queryTemplate != null
-			&& queryTemplate.toLowerCase().indexOf(" where ") < 0
-			&& queryString.length() > 4 && queryString.substring(0, 4).equals(" AND"))
-		{
-			queryString.delete(0, 4);
-		}
-
-		StringBuilder countQueryString = new StringBuilder();
-		
-		countQueryString.append(queryString);
-
-		if (queryTemplate != null) {
-			if (queryCountTemplate == null) {
-				queryString.insert(0, queryTemplate);
-				countQueryString = new StringBuilder(queryString);
-				countQueryString.insert(0, "SELECT COUNT(*) ");
-			} else {
-				countQueryString = new StringBuilder(queryString);
-				queryString.insert(0, queryTemplate);
-				countQueryString.insert(0, queryCountTemplate);
-			}
-
-			queryString.append(orderBy);
-		} else {
-			queryString.insert(0, "FROM " + viewClass.getSimpleName());
-			countQueryString = new StringBuilder(queryString);
-			countQueryString.insert(0, "SELECT COUNT(*) ");
-			queryString.append(orderBy);
-		}
-
-		if (!isNoCount() && countQueryString.length() > 0 && virtualFilters.size() == 0) {
-			// Un comptage ne peut être effectué que s'il n'existe pas de filtre
-			// virtuel
-			Query countQuery = entityManager.createQuery(countQueryString.toString());
-			
-			for (String paramKey : parameters.keySet())
-				countQuery.setParameter(paramKey, parameters.get(paramKey));
-
-			// logger.debug("Requete de comptage: " + countQueryString.toString());
-
-			Object count = countQuery.getSingleResult();
-
-			if (count != null) {
-				try {
-					resultCount = Integer.valueOf(count.toString());
-				} catch (Exception e) { }
-			}
-		}
-
-		if (maxResults != null && resultCount != null && resultCount > maxResults) {
-			resultRealCount = resultCount;
-			resultCount = maxResults;
-		}
-
-		Query query = entityManager.createQuery(queryString.toString());
-		
-		if (resultsPerPage != null && virtualFilters.size() == 0) {
-			// Il est précisé un resultat maximum par page, il y donc une sorte de curseur
-			// Par contre cela ne peut pas être appliqué dans le cadre d'un filtre virtuel
-			
-			// Vérification aussi que firstResult est en accord entre pageIndex et resultCount
-			Integer queryPageIndex = pageIndex;
-
-			if (resultCount != null && resultsPerPage != null) {
-				Integer maxPageCount = ((resultCount - 1) / resultsPerPage) + 1;
-	
-				if (queryPageIndex > maxPageCount) {
-					// La page demandée est au delà du nombre de pages attendues
-					// Réajustement de celle-ci
-					queryPageIndex = maxPageCount;
-				}
-			}
-
-			query.setMaxResults(resultsPerPage);
-			query.setFirstResult(resultsPerPage * (queryPageIndex - 1));
-		} else if (maxResults != null) {
-			query.setMaxResults(maxResults);
-		}
-
-		for (String paramKey : parameters.keySet())
-			query.setParameter(paramKey, parameters.get(paramKey));
-
-		List<Object> results = query.getResultList();
-
-		/*
-		if (results.size() > 1)
-			results = new ArrayList<Object>(new LinkedHashSet<Object>(results));
-			*/
-
-		List<VIEW> viewResults = resultMapper != null ? resultMapper.map(this, results) : (List<VIEW>) results;
-		
-		if (virtualFilters.size() > 0) {
-			// Filtrage virtuel
-			filterViewResults(viewResults, virtualFilters);
-			resultCount = viewResults.size();
-		}
-
-		if (resultCount == null)
-			resultCount = viewResults.size();
-
-		if (orderByColumn != null && orderByColumn.isVirtualSort())
-			sortViewResults(viewResults, orderByColumn);
-
-		setResults(viewResults);
 	}
 
 	public String getSortLink() {
@@ -1158,37 +727,13 @@ public class DataTable<VIEW> {
 	}
 
 	/**
-	 * 
+	 * Result for CURRENT view and not ALL results
 	 * @param results
 	 */
 	public DataTable<VIEW> setResults(List<VIEW> results) {
 		this.results = results;
 
 		return this;
-	}
-	
-	public String getQueryCountTemplate() {
-		return queryCountTemplate;
-	}
-	
-	public void setQueryCountTemplate(String queryCountTemplate) {
-		this.queryCountTemplate = queryCountTemplate;
-	}
-
-	/**
-	 * 
-	 * @return
-	 */
-	public String getQueryTemplate() {
-		return queryTemplate;
-	}
-
-	/**
-	 * 
-	 * @param queryTemplate
-	 */
-	public void setQueryTemplate(String queryTemplate) {
-		this.queryTemplate = queryTemplate;
 	}
 	
 	/**
@@ -1344,6 +889,14 @@ public class DataTable<VIEW> {
 	public Integer getResultCount() {
 		return resultCount;
 	}
+
+	/**
+	 * 
+	 * @param resultCount
+	 */
+	public void setResultCount(Integer resultCount) {
+		this.resultCount = resultCount;
+	}
 	
 	/**
 	 * Nombre de résultats avant limitation du nombre affiché. Permet de savoir
@@ -1352,6 +905,15 @@ public class DataTable<VIEW> {
 	 */
 	public Integer getResultRealCount() {
 		return resultRealCount;
+	}
+	
+	/**
+	 * Nombre de résultats avant limitation du nombre affiché. Permet de savoir
+	 * si le filtre ramène plus de résultats que le nombre réellement affiché.
+	 * @param resultRealCount
+	 */
+	public void setResultRealCount(Integer resultRealCount) {
+		this.resultRealCount = resultRealCount;
 	}
 	
 	public String getAvailableExporters() {
@@ -1484,5 +1046,12 @@ public class DataTable<VIEW> {
 	 */
 	public void setNoCount(boolean noCount) {
 		this.noCount = noCount;
+	}
+	
+	/**
+	 * 
+	 */
+	public Integer getMaxResults() {
+		return maxResults;
 	}
 }

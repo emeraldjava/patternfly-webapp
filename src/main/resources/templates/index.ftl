@@ -1,9 +1,13 @@
 <#import "/layout/layouts.ftl" as layout>
 
 <@layout.main>
-  <h1>Static rendering</h1>
+  <h1>Static rendering (<a href="/json${navigatorDataTable.sortLink}">JSON</a>)</h1>
 
   <@layout.showDataTable navigatorDataTable />
+  
+  <h1>Static rendering with Ajax</h1>
+
+  <@layout.showDataTable navigatorDataTableAjax 'ajax' />
 
   <h1>Dynamic rendering</h1>
   

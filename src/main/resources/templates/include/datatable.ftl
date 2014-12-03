@@ -141,12 +141,69 @@
     <#return -1 /> 
 </#function>
 
-<#macro writeSortJavaScript dataTable dataTableResultId>
-    <#assign id = dataTable.id! />
+<#macro writeJavaScript dataTable type>
+    <#local id = dataTable.id! />
     <script language="javascript">
+        function doExport_${id}(format) {
+	        var rForm = document.getElementById('formRecherche_${id}');
+	
+	        rForm.modeExport_${id}.value = format;
+	        rForm.submit();
+	    }
+	
+	    function doSubmit_${id}(type) {
+			fctWaiting(true);
+
+	        if (type == 'ajax') {
+	        	$.ajax({
+	        		url: '?modeExport_${id}=json&pageIndex=1',
+	        		success: function(obj) {
+	        			console.log(obj);
+	        		}
+	        	});
+
+	        	fctWaiting(false);
+	        } else {
+		        var rForm = document.getElementById('formRecherche_${id}');
+		
+		        rForm.modeExport_${id}.value = "${dataTable.modeExport!}";
+		        rForm.submit();
+			}
+	    }
+	    
+	    function doReset_${id}() {
+	        $(document).ready(':input','#formRecherche_${id}')
+	            .not(':button, :submit, :reset, :hidden')
+	            .val('')
+	            .attr('value', '')
+	            .removeAttr('checked')
+	            .removeAttr('selected');
+	    }
+
+
+        function switchFiltrage_${id}() {
+            if ($('#dataTableSearchBarExtended_${id}').is(":visible")) {
+                $('#dataTableSearchBarTitleIcon_${id}').removeClass('fa-angle-up').addClass('fa-angle-down');
+                $('#dataTableSearchBarExtended_${id}').slideUp("fast");
+                $('#dataTableSearchBarSearchButton_${id}').fadeIn("fast");
+                $('#showFilters_${id}').val("0");
+            } else {
+                $('#dataTableSearchBarTitleIcon_${id}').removeClass('fa-angle-down').addClass('fa-angle-up');
+                $('#dataTableSearchBarExtended_${id}').slideDown("fast");
+                $('#dataTableSearchBarSearchButton_${id}').fadeOut("fast");
+                $('#showFilters_${id}').val("1");
+            }
+        }
+
         $(document).ready(function() {
-            $('#${dataTableResultId} tr').click(function(event) {
-            	console.log($(event.target));
+	        // Show filter bar if needed
+		    <#local hasFilter = dataTable.hasVisibleFilter()>
+	        <#if (!hasFilter) && dataTable.results?size = 0>
+				$('#dataTableSearchBarSearchButton_${id}').show();
+	        </#if>
+
+        	// Sort
+            $('#dataTableResult_${id} tr').click(function(event) {
                 var target = $(event.target);
                 if (target.get(0).tagName != "TH")
                     target = target.parentsUntil("th");
@@ -155,20 +212,48 @@
                     sens_tri = 3 - (sens_tri == 0 ? 2 : sens_tri);
                     var mode_tri = target.attr('dt_mode_tri');
                     fctWaiting(true);
-                    document.location.href = "${dataTable.sortLink}&modeTri${id!}=" + mode_tri + "&sensTri${id!}=" + sens_tri;
+                    document.location.href = "${dataTable.sortLink}&modeTri_${id!}=" + mode_tri + "&sensTri_${id!}=" + sens_tri;
                 }
+            });
+
+            // Paginate
+            $('#DataTables_Table_${id}_paginate').click(function(event) {
+            	<#local pagLink = pageLink(dataTable) />
+            	var target = $(event.target);
+            	if (!target.parent().hasClass('disabled')) {
+	            	if (target.hasClass('fa-angle-double-left'))
+	            		document.location.href = "${pagLink}1";
+	            	if (target.hasClass('fa-angle-left'))
+	            		document.location.href = "${pagLink}${(dataTable.pageIndex - 1)?c}";
+	            	if (target.hasClass('fa-angle-right'))
+	            		document.location.href = "${pagLink}${(dataTable.pageIndex + 1)?c}";
+	            	if (target.hasClass('fa-angle-double-right'))
+						document.location.href = "${pagLink}${dataTable.pageCount?c}";
+				}    		
+            });
+
+            // Set current page
+            $('#DataTables_Table_${id}_paginate input').val(${dataTable.pageIndex?c}).prop('disabled', true);
+            
+            $('#btnReset_${id}').click(function () {
+                doReset_${id}();
+            });
+
+            $('#btnSearch_${id}').click(function () {
+               	doSubmit_${id}('${type}');
             });
         });
     </script>
 </#macro>
 
+
 <#function pageLink dataTable>
-    <#assign id = dataTable.id />
+    <#local id = dataTable.id />
     <#return dataTable.sortLink
-        ?replace("&pageIndex" + (id!) + "=" + dataTable.pageIndex, "")
-        ?replace("?pageIndex" + (id!) + "=" + dataTable.pageIndex + "&", "?")
-        + "&modeTri" + (id!) + "=" + dataTable.modeTri
-        + "&sensTri" + (id!) + "=" + dataTable.sensTri
-        + "&pageIndex" + (id!) + "=" />
+        ?replace("&pageIndex_" + (id!) + "=" + dataTable.pageIndex, "")
+        ?replace("?pageIndex_" + (id!) + "=" + dataTable.pageIndex + "&", "?")
+        + "&modeTri_" + (id!) + "=" + dataTable.modeTri
+        + "&sensTri_" + (id!) + "=" + dataTable.sensTri
+        + "&pageIndex_" + (id!) + "=" />
 </#function>
 

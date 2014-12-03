@@ -7,9 +7,13 @@ import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import fr.pgervaise.patternfly.datatable.core.DataTable;
 import fr.pgervaise.patternfly.datatable.core.DataTableColumn;
@@ -17,7 +21,8 @@ import fr.pgervaise.patternfly.datatable.core.DataTableFilter;
 import fr.pgervaise.patternfly.datatable.core.DataTableFilter.Operator;
 import fr.pgervaise.patternfly.datatable.core.DataTableFilterOperator;
 import fr.pgervaise.patternfly.datatable.core.DataTableFilterValue;
-import fr.pgervaise.patternfly.datatable.datasource.DataTableDataSource;
+import fr.pgervaise.patternfly.datatable.core.FlexigridExporter;
+import fr.pgervaise.patternfly.datatable.datasource.DataTableVirtualDataSource;
 import fr.pgervaise.patternfly.domain.Navigator;
 import fr.pgervaise.patternfly.webapp.view.NavigatorView;
 
@@ -29,9 +34,13 @@ import fr.pgervaise.patternfly.webapp.view.NavigatorView;
 @Controller
 public class IndexController {
 
-    @RequestMapping({"/", "/index"})
-    public String viewHome(HttpServletRequest request, Model model) {
-        
+
+    /**
+     * 
+     * @param request
+     * @return
+     */
+    public DataTable<NavigatorView> getDataTable(HttpServletRequest request, String id, boolean dynamic, boolean ajax) {
         String dataArray[][] = new String[][] {
             { "Trident", "Internet Explorer 4.0", "Win 95+", "4", "X" }, 
             { "Trident", "Internet Explorer 5.0", "Win 95+", "5", "C" }, 
@@ -98,7 +107,7 @@ public class IndexController {
         for (String data[] : dataArray)
             navigatorList.add(new Navigator(data));
 
-        DataTable<NavigatorView> navigatorDataTable = new DataTable<NavigatorView>(NavigatorView.class, "static");
+        DataTable<NavigatorView> navigatorDataTable = new DataTable<NavigatorView>(NavigatorView.class, id);
 
         navigatorDataTable.addColumn(new DataTableColumn("renderingEngine", "Rendering Engine"));
         navigatorDataTable.addColumn(new DataTableColumn("browser", "Browser"));
@@ -106,45 +115,72 @@ public class IndexController {
         navigatorDataTable.addColumn(new DataTableColumn("engineVersion", "Engine version"));
         navigatorDataTable.addColumn(new DataTableColumn("cssGrade", "CSS grade"));
 
-        navigatorDataTable.addFilter(new DataTableFilter("Rendering Engine").setId("renderingEngine").setOperator(Operator.CONTAINS));
-        navigatorDataTable.addFilter(new DataTableFilter("Browser").setId("browser").setOperator(Operator.CONTAINS));
-        navigatorDataTable.addFilter(new DataTableFilter("Platform(s)").setId("platform").setOperator(Operator.CONTAINS));
+        if (!dynamic) {
+	        navigatorDataTable.addFilter(new DataTableFilter("Rendering Engine").setId("renderingEngine").setOperator(Operator.CONTAINS));
+	        navigatorDataTable.addFilter(new DataTableFilter("Browser").setId("browser").setOperator(Operator.CONTAINS));
+	        navigatorDataTable.addFilter(new DataTableFilter("Platform(s)").setId("platform").setOperator(Operator.CONTAINS));
+	
+	        navigatorDataTable.addFilter(new DataTableFilter("Engine version").setId("engineVersion").setNewLine().setAcceptedOperators(
+	        	Arrays.asList(Operator.IS, Operator.LOWER, Operator.LOWER_OR_EQUAL, Operator.GREATER, Operator.GREATER_OR_EQUAL)
+	        		.stream().map(DataTableFilterOperator::new).collect(Collectors.toList())
+	        ));
+	
+	        navigatorDataTable.addFilter(new DataTableFilter("CSS Grade").setId("cssGrade").setAcceptedValues(
+	                Arrays.asList("A", "C", "X").stream().map(DataTableFilterValue::new).collect(Collectors.toList())
+	        ));
 
-        navigatorDataTable.addFilter(new DataTableFilter("Engine version").setId("engineVersion").setNewLine().setAcceptedOperators(
-        	Arrays.asList(Operator.LOWER, Operator.LOWER_OR_EQUAL, Operator.GREATER, Operator.GREATER_OR_EQUAL)
-        		.stream().map(DataTableFilterOperator::new).collect(Collectors.toList())
-        ));
+	        navigatorDataTable.setAvailableExporters("csv");
+        } else {
+        	// no max result
+        	navigatorDataTable.setResultsPerPage(null);
+        }
 
-        navigatorDataTable.addFilter(new DataTableFilter("CSS Grade").setId("cssGrade").setAcceptedValues(
-                Arrays.asList("A", "C", "X").stream().map(DataTableFilterValue::new).collect(Collectors.toList())
-        ));
-
-        navigatorDataTable.setDataSource(new DataTableDataSource<NavigatorView>() {
+        navigatorDataTable.setDataSource(new DataTableVirtualDataSource<NavigatorView>(navigatorDataTable) {
             @Override
-            public List<? extends Object> getResults(DataTable<NavigatorView> dataTable) {
+            public List<? extends Object> getResults() {
                 // No dynamic filter
                 return navigatorList;
             }
         });
 
         // Launch the "query"
-        navigatorDataTable.setDoQueryOnFirstView(true);
+       	navigatorDataTable.setDoQueryOnFirstView(!ajax);
+
         navigatorDataTable.init(request);
 
-        model.addAttribute("navigatorDataTable", navigatorDataTable);
-        
-        // All data
-        DataTable<NavigatorView> navigatorDataTableAll = new DataTable<NavigatorView>(NavigatorView.class, "all");
-        for (DataTableColumn column : navigatorDataTable.getColumns())
-            navigatorDataTableAll.addColumn(column);
+        return navigatorDataTable;
+    }
 
-        navigatorDataTableAll.setDataSource(navigatorDataTable.getDataSource());
-        navigatorDataTableAll.setDoQueryOnFirstView(true);
-        navigatorDataTableAll.setResultsPerPage(1000); // max 1000 results
-        navigatorDataTableAll.init(request);
-        
-        model.addAttribute("navigatorDataTableAll", navigatorDataTableAll);
+    @RequestMapping({"/", "/index"})
+    public String viewHome(HttpServletRequest request, Model model) {
+        model.addAttribute("navigatorDataTable", getDataTable(request, "static", false, false));
+        model.addAttribute("navigatorDataTableAjax", getDataTable(request, "ajax", false, true));
+        model.addAttribute("navigatorDataTableAll", getDataTable(request, "all", true, false));
 
         return "index";
+    }
+
+    @RequestMapping(value={"/", "/index"}, params={"modeExport_static=csv"})
+    public ResponseEntity<String> exportCSV(HttpServletRequest request, Model model) {
+    	String csvData = getDataTable(request, "static", false, false).exportToCSV();
+
+		HttpHeaders responseHeaders = new HttpHeaders();
+	    responseHeaders.add("Content-Type", "application/vnd.ms-excel");
+	    responseHeaders.add("Content-Length", Integer.toString(csvData.length()));
+	    responseHeaders.add("Content-Disposition", "attachment; filename=test" + System.currentTimeMillis() + ".csv");
+
+		return new ResponseEntity<String>(csvData, responseHeaders, HttpStatus.OK);
+    }
+
+    @RequestMapping(value={"/json"}, params={"modeExport_static=json"})
+    @ResponseBody
+    public String viewJsonDataTableStatic(HttpServletRequest request, Model model) {
+    	return new FlexigridExporter().doExport(getDataTable(request, "static", false, false));
+    }
+
+    @RequestMapping(value={"/", "/index"}, params={"modeExport_ajax=json"}, produces="application/json; charset=utf-8")
+    @ResponseBody
+    public String viewJsonDataTableAjax(HttpServletRequest request, Model model) {
+    	return new FlexigridExporter().doExport(getDataTable(request, "ajax", false, false));
     }
 }

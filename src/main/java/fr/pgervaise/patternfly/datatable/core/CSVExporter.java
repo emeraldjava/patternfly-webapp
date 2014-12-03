@@ -17,6 +17,8 @@ import java.util.Map;
  */
 public class CSVExporter {
 
+	public final String NAME = "CSV";
+
 	private String newLine = null;
 	private String fieldSeparator = null;
 	private boolean quoteFields = true;
