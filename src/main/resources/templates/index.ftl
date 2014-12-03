@@ -5,7 +5,7 @@
 
   <@layout.showDataTable navigatorDataTable />
   
-  <h1>Static rendering with Ajax</h1>
+  <h1>Static rendering with Ajax <em>(not functionnal)</em></h1>
 
   <@layout.showDataTable navigatorDataTableAjax 'ajax' />
 

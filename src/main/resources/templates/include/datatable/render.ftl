@@ -22,7 +22,7 @@
 
     <#if (dataTable.params?size > 0)>
         <#list dataTable.params?keys as paramName>
-            <input type="hidden" value="${dataTable.params[paramName]!}" name="${paramName}" id="${paramName}">
+            <input type="hidden" value="${dataTable.params[paramName]!}" name="${paramName}_${id}" id="${paramName}_${id}">
         </#list>
     </#if>
 
@@ -45,7 +45,7 @@
                     </#if>
                 </#if>
             </#if>
-            <div id="dataTableSearchBarSearchButton" style="display: <#if showFilters>none<#else>visible</#if>">
+            <div id="dataTableSearchBarSearchButton_${id}" style="display: <#if showFilters>none<#else>visible</#if>">
                 <a href="javascript:doSubmit_${id}()" class="btn btn-default btn-xs pull-right" style="margin-top: 0px; margin-bottom: 5px; margin-right: 5px"><@spring.message "datatable.filter.button" /></a>
             </div>
         </div>
@@ -169,7 +169,7 @@
                             style="<#if ((column.width!0) > 0)>width: ${column.width!0}px;</#if> vertical-align: top">
                             ${column.label}
                             <#if column.headerComment??>
-                                <span class="glyphicon glyphicon-info-sign" id="tip-info-dt${dataTable.id}-${column_index}" title="${column.headerComment}"></span>
+                                <span class="glyphicon glyphicon-info-sign" id="tip-info-dt_${dataTable.id}_${column_index}" title="${column.headerComment}"></span>
                             </#if>
                         </th>
                     </#if>

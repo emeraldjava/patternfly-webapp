@@ -559,6 +559,12 @@ public class DataTable<VIEW> {
 				sortLink.append(filterLoop.getValue() == null ? "" : URLEncoder.encode(filterLoop.getValue().toString(), "UTF-8"));
 			} catch (UnsupportedEncodingException e) { throw new RuntimeException(e); }
 
+			if (filterLoop.getAcceptedOperators() != null && filterLoop.getAcceptedOperators().size() > 0) {
+				sortLink.append("&filter_" + filterIndex + "_op_");
+				sortLink.append(id);
+				sortLink.append("=");
+				sortLink.append(filterLoop.getOperator() == null ? "" : filterLoop.getOperator().getId().toString());
+			}
 		}
 
 		// Prend la page en cours

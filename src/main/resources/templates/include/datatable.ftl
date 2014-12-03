@@ -150,7 +150,7 @@
 	        rForm.modeExport_${id}.value = format;
 	        rForm.submit();
 	    }
-	
+
 	    function doSubmit_${id}(type) {
 			fctWaiting(true);
 
@@ -179,7 +179,6 @@
 	            .removeAttr('checked')
 	            .removeAttr('selected');
 	    }
-
 
         function switchFiltrage_${id}() {
             if ($('#dataTableSearchBarExtended_${id}').is(":visible")) {
@@ -211,8 +210,11 @@
                 if (sens_tri !== undefined && sens_tri >= 0) {
                     sens_tri = 3 - (sens_tri == 0 ? 2 : sens_tri);
                     var mode_tri = target.attr('dt_mode_tri');
-                    fctWaiting(true);
-                    document.location.href = "${dataTable.sortLink}&modeTri_${id!}=" + mode_tri + "&sensTri_${id!}=" + sens_tri;
+
+					$('#modeTri_${id}').val(mode_tri);
+					$('#sensTri_${id}').val(sens_tri);
+					
+                    doSubmit_${id}();
                 }
             });
 
@@ -221,20 +223,27 @@
             	<#local pagLink = pageLink(dataTable) />
             	var target = $(event.target);
             	if (!target.parent().hasClass('disabled')) {
-	            	if (target.hasClass('fa-angle-double-left'))
-	            		document.location.href = "${pagLink}1";
+					var pageIndex = undefined;
+
+					if (target.hasClass('fa-angle-double-left'))
+	            		pageIndex = 1;
 	            	if (target.hasClass('fa-angle-left'))
-	            		document.location.href = "${pagLink}${(dataTable.pageIndex - 1)?c}";
+	            		pageIndex = ${(dataTable.pageIndex - 1)?c};
 	            	if (target.hasClass('fa-angle-right'))
-	            		document.location.href = "${pagLink}${(dataTable.pageIndex + 1)?c}";
+	            		pageIndex = ${(dataTable.pageIndex + 1)?c};
 	            	if (target.hasClass('fa-angle-double-right'))
-						document.location.href = "${pagLink}${dataTable.pageCount?c}";
+						pageIndex = ${dataTable.pageCount?c};
+
+					if (pageIndex) {
+						$('#pageIndex_${id}').val(pageIndex);
+						doSubmit_${id}();
+					}
 				}    		
             });
 
             // Set current page
             $('#DataTables_Table_${id}_paginate input').val(${dataTable.pageIndex?c}).prop('disabled', true);
-            
+
             $('#btnReset_${id}').click(function () {
                 doReset_${id}();
             });
